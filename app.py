@@ -20,27 +20,9 @@ def parse_tickers(raw_value: str) -> List[str]:
 
 
 @lru_cache(maxsize=64)
-def normalize_price_columns(data: pd.DataFrame) -> pd.DataFrame:
-    df = data.copy()
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [
-            "_".join([str(level) for level in levels if level]).strip()
-            for levels in df.columns.to_list()
-        ]
-    df = df.rename(columns=str.title)
-
-    for base in ["Open", "High", "Low", "Close", "Adj Close", "Volume"]:
-        if base in df.columns:
-            continue
-        matches = [col for col in df.columns if col.startswith(f"{base}_")]
-        if len(matches) == 1:
-            df = df.rename(columns={matches[0]: base})
-    return df
-
-
 def fetch_prices(ticker: str, start: str, end: str) -> pd.DataFrame:
     data = yf.download(ticker, start=start, end=end, auto_adjust=False, progress=False)
-    data = normalize_price_columns(data)
+    data = data.rename(columns=str.title)
     data = data.dropna()
     return data
 
@@ -213,11 +195,9 @@ def tradingview_iframe(symbol: str) -> html.Iframe:
 
 
 def data_table(df: pd.DataFrame) -> DataTable:
-    safe_df = df.copy()
-    safe_df.columns = [str(col) for col in safe_df.columns]
     return DataTable(
-        data=safe_df.to_dict("records"),
-        columns=[{"name": col, "id": col} for col in safe_df.columns],
+        data=df.to_dict("records"),
+        columns=[{"name": col, "id": col} for col in df.columns],
         page_size=5,
         style_table={"overflowX": "auto"},
         style_header={"fontWeight": "bold"},
